@@ -101,6 +101,13 @@ export default {
               vm.issuingCAConfigured ? 'UKeyVCTKSIssuingCAConfigured' : 'UKeyVCTKSIssuingCANotConfigured'
             ))
           },
+          AUTH_UKEY_VCTK_S_TLS_VERIFY: {
+            options: [
+              { value: 'custom', label: this.$t('UKeyTLSCustomCA') },
+              { value: 'insecure', label: this.$t('UKeyTLSInsecure') }
+            ],
+            tips: false
+          },
           AUTH_UKEY_VCTK_S_TLS_CA_CERT: { component: UploadKey, label: this.$t('CACertificate') },
           AUTH_UKEY_XJCA_SVS_URL: {
             label: this.$t('UKeySVSURL'),
@@ -137,8 +144,8 @@ export default {
           }
           obj[SSL_FIELD] = !/^http:\/\//i.test(vm.draftServiceURL)
           obj[VCTKS_SSL_FIELD] = !/^http:\/\//i.test(vm.draftVCTKSServiceURL)
-          if (!['system', 'custom', 'insecure'].includes(obj.AUTH_UKEY_VCTK_S_TLS_VERIFY)) {
-            obj.AUTH_UKEY_VCTK_S_TLS_VERIFY = 'system'
+          if (!['custom', 'insecure'].includes(obj.AUTH_UKEY_VCTK_S_TLS_VERIFY)) {
+            obj.AUTH_UKEY_VCTK_S_TLS_VERIFY = 'custom'
           }
           if (!['custom', 'insecure'].includes(obj.AUTH_UKEY_XJCA_TLS_VERIFY)) {
             obj.AUTH_UKEY_XJCA_TLS_VERIFY = 'custom'

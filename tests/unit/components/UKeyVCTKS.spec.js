@@ -91,7 +91,7 @@ describe('VCTK_S settings', () => {
   it('shows VCTK_S TLS fields according to its SSL switch and trust mode', () => {
     const vm = createVM()
     const fields = vm.settings.fieldsMeta
-    const form = { AUTH_UKEY_VCTK_S_USE_SSL: true, AUTH_UKEY_VCTK_S_TLS_VERIFY: 'system' }
+    const form = { AUTH_UKEY_VCTK_S_USE_SSL: true, AUTH_UKEY_VCTK_S_TLS_VERIFY: 'insecure' }
     expect(fields.AUTH_UKEY_VCTK_S_TLS_VERIFY.hidden(form)).toBe(false)
     expect(fields.AUTH_UKEY_VCTK_S_TLS_CA_CERT.hidden(form)).toBe(true)
     form.AUTH_UKEY_VCTK_S_TLS_VERIFY = 'custom'

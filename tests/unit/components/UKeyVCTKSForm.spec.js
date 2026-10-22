@@ -177,23 +177,28 @@ describe('VCTK_S settings in the shared form', () => {
     expect(submitted).not.toHaveProperty(TLS_CA)
   })
 
-  it('defaults HTTPS trust to system and keeps issuing CA separate from TLS', async () => {
+  it('defaults HTTPS trust to custom and uses the same choices as Xinjiang CA', async () => {
     const form = await createForm({ [SERVER_URL]: 'https://vctks.example.com', [TLS_VERIFY]: undefined })
     wrapper = form.wrapper
     expect(item(wrapper, SSL).find('.el-switch').classes()).toContain('is-checked')
-    expect(item(wrapper, TLS_VERIFY).find('input[value="system"]').element.checked).toBe(true)
-    expect(item(wrapper, TLS_CA).exists()).toBe(false)
+    expect(item(wrapper, TLS_VERIFY).findAll('input').wrappers.map(input => input.element.value)).toEqual(['custom', 'insecure'])
+    expect(item(wrapper, TLS_VERIFY).findAll('.el-radio__label').wrappers.map(label => label.text())).toEqual([
+      'UKeyTLSCustomCA', 'UKeyTLSInsecure'
+    ])
+    expect(item(wrapper, TLS_VERIFY).find('input[value="custom"]').element.checked).toBe(true)
+    expect(item(wrapper, TLS_CA).exists()).toBe(true)
     expect(item(wrapper, ISSUING_CA).exists()).toBe(true)
     await submit(wrapper)
-    expect(form.axios.patch.mock.calls[0][1][TLS_VERIFY]).toBe('system')
+    expect(form.axios.patch.mock.calls[0][1][TLS_VERIFY]).toBe('custom')
   })
 
-  it('shows the default system trust when the URL is empty and SSL is enabled', async () => {
+  it('normalizes saved system trust to custom when the URL is empty and SSL is enabled', async () => {
     const form = await createForm({ [SERVER_URL]: '' })
     wrapper = form.wrapper
     expect(item(wrapper, SSL).find('.el-switch').classes()).toContain('is-checked')
-    expect(item(wrapper, TLS_VERIFY).find('input[value="system"]').element.checked).toBe(true)
-    expect(item(wrapper, TLS_CA).exists()).toBe(false)
+    expect(item(wrapper, TLS_VERIFY).find('input[value="system"]').exists()).toBe(false)
+    expect(item(wrapper, TLS_VERIFY).find('input[value="custom"]').element.checked).toBe(true)
+    expect(item(wrapper, TLS_CA).exists()).toBe(true)
   })
 
   it('synchronizes the SSL switch and URL without losing TLS values across mode changes', async () => {
@@ -228,12 +233,12 @@ describe('VCTK_S settings in the shared form', () => {
     const form = await createForm()
     wrapper = form.wrapper
     await setSSL(wrapper, true)
-    item(wrapper, TLS_VERIFY).find('input[value="custom"]').setChecked(true)
+    item(wrapper, TLS_VERIFY).find('input[value="insecure"]').setChecked(true)
     await reset(wrapper)
     expect(item(wrapper, SERVER_URL).find('input').element.value).toBe('http://vctks.example.com:8000')
     expect(item(wrapper, SSL).find('.el-switch').classes()).not.toContain('is-checked')
     await setSSL(wrapper, true)
-    expect(item(wrapper, TLS_VERIFY).find('input[value="system"]').element.checked).toBe(true)
+    expect(item(wrapper, TLS_VERIFY).find('input[value="custom"]').element.checked).toBe(true)
     item(wrapper, SERVER_URL).find('input').setValue('https://saved.example.com')
     await settle()
     await submit(wrapper)
@@ -278,7 +283,7 @@ describe('VCTK_S settings in the shared form', () => {
     await settle()
     expect(form.axios.post).toHaveBeenCalledWith('/api/v1/settings/ukey/testing/', {
       AUTH_UKEY_CA_PROVIDER: 'vctk_s', AUTH_UKEY_VENDOR: 'ji_da',
-      [SERVER_URL]: 'https://draft.example.com:45679', [TLS_VERIFY]: 'system'
+      [SERVER_URL]: 'https://draft.example.com:45679', [TLS_VERIFY]: 'custom'
     })
     expect(testButton.classes()).not.toContain('is-loading')
     expect(wrapper.vm.$message.success).toHaveBeenCalledWith('Version only; verification not tested.')
