@@ -33,8 +33,10 @@ const TLS_VERIFY = 'AUTH_UKEY_VCTK_S_TLS_VERIFY'
 const TLS_CA = 'AUTH_UKEY_VCTK_S_TLS_CA_CERT'
 const ISSUING_CA = 'AUTH_UKEY_VCTK_S_ISSUING_CA'
 const CA_CONFIGURED = 'AUTH_UKEY_VCTK_S_ISSUING_CA_CONFIGURED'
-const fields = [SERVER_URL, TLS_VERIFY, TLS_CA, ISSUING_CA]
-const writeOnlyFields = [TLS_CA, ISSUING_CA, 'AUTH_UKEY_DEFAULT_PIN', 'AUTH_UKEY_CA_CERT_CONTENT', 'AUTH_UKEY_XJCA_TLS_CA_CERT']
+const AUTH_USER = 'AUTH_UKEY_VCTK_S_USERNAME'
+const AUTH_PASSWORD = 'AUTH_UKEY_VCTK_S_PASSWORD'
+const fields = [SERVER_URL, TLS_VERIFY, TLS_CA, ISSUING_CA, AUTH_USER, AUTH_PASSWORD]
+const writeOnlyFields = [TLS_CA, ISSUING_CA, AUTH_PASSWORD, 'AUTH_UKEY_DEFAULT_PIN', 'AUTH_UKEY_CA_CERT_CONTENT', 'AUTH_UKEY_XJCA_TLS_CA_CERT']
 const providers = [
   {
     id: 'builtin', label: 'Builtin CA', supported_vendors: ['ji_da', 'long_mai'],
@@ -49,8 +51,8 @@ const providers = [
   },
   {
     id: 'vctk_s', label: 'VCTK_S', supported_vendors: ['ji_da'], fields,
-    secret_fields: [ISSUING_CA, TLS_CA],
-    connection_fields: [SERVER_URL, TLS_VERIFY, TLS_CA],
+    secret_fields: [ISSUING_CA, TLS_CA, AUTH_PASSWORD],
+    connection_fields: [SERVER_URL, TLS_VERIFY, TLS_CA, AUTH_USER, AUTH_PASSWORD],
     supports_connection_test: true, binding_mode: 'user_sn', expose_default_pin: true, supports_enrollment: false
   }
 ]
@@ -105,7 +107,7 @@ async function createForm(initial = {}) {
       if (values[ISSUING_CA]) stored[CA_CONFIGURED] = true
       return Promise.resolve(_.omit(_.cloneDeep(stored), writeOnlyFields))
     }),
-    post: jest.fn().mockResolvedValue({ msg: 'Version only; verification not tested.' })
+    post: jest.fn().mockResolvedValue({ msg: 'Random generation only; verification not tested.' })
   }
   const wrapper = mount(UKey, {
     localVue,
@@ -155,6 +157,21 @@ describe('VCTK_S settings in the shared form', () => {
 
   afterEach(() => {
     if (wrapper) wrapper.destroy()
+  })
+
+  it('renders optional authorization without exposing the saved password and preserves it on save', async () => {
+    const form = await createForm({ [AUTH_USER]: 'business', [AUTH_PASSWORD]: 'saved-secret' })
+    wrapper = form.wrapper
+    expect(item(wrapper, AUTH_USER).find('input').element.value).toBe('business')
+    const password = item(wrapper, AUTH_PASSWORD).find('input')
+    expect(password.attributes('type')).toBe('password')
+    expect(password.element.value).toBe('')
+    item(wrapper, AUTH_USER).find('input').setValue('')
+    await settle()
+    await submit(wrapper)
+    expect(form.axios.patch.mock.calls[0][1][AUTH_USER]).toBe('')
+    expect(form.axios.patch.mock.calls[0][1]).not.toHaveProperty(AUTH_PASSWORD)
+    expect(form.stored[AUTH_PASSWORD]).toBe('saved-secret')
   })
 
   it('shows the compact HTTP form and preserves saved certificates and administrative settings', async () => {
@@ -286,7 +303,7 @@ describe('VCTK_S settings in the shared form', () => {
       [SERVER_URL]: 'https://draft.example.com:45679', [TLS_VERIFY]: 'custom'
     })
     expect(testButton.classes()).not.toContain('is-loading')
-    expect(wrapper.vm.$message.success).toHaveBeenCalledWith('Version only; verification not tested.')
+    expect(wrapper.vm.$message.success).toHaveBeenCalledWith('Random generation only; verification not tested.')
   })
 
   it('preserves builtin and Longmai provider controls and connection behavior', async () => {

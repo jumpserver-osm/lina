@@ -18,9 +18,10 @@ const providers = [
   {
     id: 'vctk_s', label: 'VCTK_S', supported_vendors: ['ji_da'],
     fields: ['AUTH_UKEY_VCTK_S_SVS_URL', 'AUTH_UKEY_VCTK_S_TLS_VERIFY', 'AUTH_UKEY_VCTK_S_TLS_CA_CERT',
-      'AUTH_UKEY_VCTK_S_ISSUING_CA'],
-    secret_fields: ['AUTH_UKEY_VCTK_S_TLS_CA_CERT', 'AUTH_UKEY_VCTK_S_ISSUING_CA'],
-    connection_fields: ['AUTH_UKEY_VCTK_S_SVS_URL', 'AUTH_UKEY_VCTK_S_TLS_VERIFY', 'AUTH_UKEY_VCTK_S_TLS_CA_CERT'],
+      'AUTH_UKEY_VCTK_S_ISSUING_CA', 'AUTH_UKEY_VCTK_S_USERNAME', 'AUTH_UKEY_VCTK_S_PASSWORD'],
+    secret_fields: ['AUTH_UKEY_VCTK_S_TLS_CA_CERT', 'AUTH_UKEY_VCTK_S_ISSUING_CA', 'AUTH_UKEY_VCTK_S_PASSWORD'],
+    connection_fields: ['AUTH_UKEY_VCTK_S_SVS_URL', 'AUTH_UKEY_VCTK_S_TLS_VERIFY', 'AUTH_UKEY_VCTK_S_TLS_CA_CERT',
+      'AUTH_UKEY_VCTK_S_USERNAME', 'AUTH_UKEY_VCTK_S_PASSWORD'],
     supports_connection_test: true, binding_mode: 'user_sn', expose_default_pin: true, supports_enrollment: false
   }
 ]
@@ -40,6 +41,39 @@ function createVM() {
 }
 
 describe('VCTK_S settings', () => {
+  it('groups optional business authorization separately and hides it for other providers', () => {
+    const vm = createVM()
+    const fields = vm.settings.fields.find(([label]) => label === 'UKeyVCTKSAuthorizationAdvanced')[1]
+    expect(fields).toEqual(['AUTH_UKEY_VCTK_S_USERNAME', 'AUTH_UKEY_VCTK_S_PASSWORD'])
+    expect(vm.settings.fieldsMeta.AUTH_UKEY_VCTK_S_PASSWORD.el.type).toBe('password')
+    expect(vm.settings.fieldsMeta.AUTH_UKEY_VCTK_S_USERNAME.hidden({})).toBe(false)
+    vm.draftProvider = 'builtin'
+    expect(vm.settings.fieldsMeta.AUTH_UKEY_VCTK_S_USERNAME.hidden({})).toBe(true)
+  })
+
+  it('keeps a saved password when blank and allows authorization to be disabled', () => {
+    const vm = createVM()
+    const clean = vm.cleanSettings({
+      AUTH_UKEY_CA_PROVIDER: 'vctk_s', AUTH_UKEY_VENDOR: 'ji_da',
+      AUTH_UKEY_VCTK_S_USERNAME: '', AUTH_UKEY_VCTK_S_PASSWORD: ''
+    })
+    expect(clean.AUTH_UKEY_VCTK_S_USERNAME).toBe('')
+    expect(clean).not.toHaveProperty('AUTH_UKEY_VCTK_S_PASSWORD')
+  })
+
+  it('includes supplied business authorization in connection tests', async () => {
+    const vm = createVM()
+    vm.$axios = { post: jest.fn().mockResolvedValue({ msg: 'Random generation checked' }) }
+    vm.$message = { success: jest.fn() }
+    await vm.testConnection({
+      AUTH_UKEY_CA_PROVIDER: 'vctk_s', AUTH_UKEY_VENDOR: 'ji_da',
+      AUTH_UKEY_VCTK_S_USERNAME: 'business', AUTH_UKEY_VCTK_S_PASSWORD: 'new-password'
+    }, null, { loading: false })
+    expect(vm.$axios.post.mock.calls[0][1]).toMatchObject({
+      AUTH_UKEY_VCTK_S_USERNAME: 'business', AUTH_UKEY_VCTK_S_PASSWORD: 'new-password'
+    })
+  })
+
   it('shows VCTK_S for JIT and keeps Xinjiang CA restricted to Longmai', () => {
     const vm = createVM()
     expect(vm.availableProviders.map(provider => provider.id)).toEqual(['builtin', 'vctk_s'])
@@ -103,7 +137,7 @@ describe('VCTK_S settings', () => {
 
   it('tests only connection fields, preserves saved secrets and displays the scoped result', async () => {
     const vm = createVM()
-    vm.$axios = { post: jest.fn().mockResolvedValue({ msg: 'Version only; verification not tested.' }) }
+    vm.$axios = { post: jest.fn().mockResolvedValue({ msg: 'Random generation only; verification not tested.' }) }
     vm.$message = { success: jest.fn() }
     const button = { loading: false }
     await vm.testConnection({
@@ -116,7 +150,7 @@ describe('VCTK_S settings', () => {
     expect(draft).not.toHaveProperty('AUTH_UKEY_VCTK_S_ISSUING_CA')
     expect(draft).not.toHaveProperty('AUTH_UKEY_VCTK_S_TLS_CA_CERT')
     expect(draft).not.toHaveProperty('AUTH_UKEY_VCTK_S_UNKNOWN')
-    expect(vm.$message.success).toHaveBeenCalledWith('Version only; verification not tested.')
+    expect(vm.$message.success).toHaveBeenCalledWith('Random generation only; verification not tested.')
     expect(button.loading).toBe(false)
   })
 
