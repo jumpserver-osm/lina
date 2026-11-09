@@ -1,0 +1,179 @@
+<template>
+  <Dialog
+    v-if="iVisible"
+    :show-cancel="false"
+    :show-confirm="false"
+    :title="$tc('About')"
+    :visible.sync="iVisible"
+    class="about-dialog"
+    top="10%"
+    width="50%"
+  >
+    <div class="box">
+      <div class="head">
+        <img :src="logoSrc" alt="logo" class="sidebar-logo-text" height="70">
+      </div>
+      <tr v-for="item of items" v-show="item.has || item.has === undefined" :key="item.label" class="text">
+        <td class="title">{{ item.label }}: </td>
+        <td class="value">{{ item.value }}</td>
+      </tr>
+      <el-divider class="divider" />
+      <div class="text">
+        <span v-for="(i, index) in visibleActions" :key="i.name" class="text-link" @click="onClick(i.name)">
+          <i :class="i.icon" class="icon" />
+          {{ i.label }}
+          <el-divider v-if="index !== visibleActions.length - 1" direction="vertical" />
+        </span>
+      </div>
+    </div>
+  </Dialog>
+</template>
+
+<script>
+import Dialog from '@/components/Dialog'
+import { mapGetters } from 'vuex'
+
+export default {
+  components: {
+    Dialog
+  },
+  props: {
+    visible: {
+      type: Boolean,
+      default: false
+    }
+  },
+  data() {
+    return {
+      actions: [
+        {
+          name: 'download',
+          label: this.$tc('DownloadCenter'),
+          icon: 'fa fa-download'
+        }
+      ]
+    }
+  },
+  computed: {
+    ...mapGetters([
+      'publicSettings'
+    ]),
+    iVisible: {
+      set(val) {
+        this.$emit('update:visible', val)
+      },
+      get() {
+        return this.visible
+      }
+    },
+    iVersion() {
+      // 'version-dev' 是构建时 sed 替换的占位符（替换为如 v4.0.0-build01）。
+      // 展示时去掉 -build<编号> 及其后面的内容：v4.0.0-build01 -> v4.0.0
+      return 'version-dev'.replace(/-build\d+.*/i, '')
+    },
+    versionType() {
+      return this.hasXPack ? this.$t('EnterpriseEdition') : this.$tc('CommunityEdition') + ' GPLv3'
+    },
+    items() {
+      return [
+        {
+          label: this.$t('Product'),
+          value: this.versionType
+        },
+        {
+          label: this.$t('Version'),
+          value: this.iVersion
+        },
+        {
+          label: this.$t('PermissionCompany'),
+          value: this.corporation,
+          has: this.hasXPack
+        },
+        {
+          label: 'Copyright',
+          value: this.copyright,
+          has: !this.hasXPack
+        }
+      ]
+    },
+    visibleActions() {
+      return this.actions.filter((action) => {
+        return !(action.name === 'github' && this.publicSettings.XPACK_LICENSE_IS_VALID)
+      })
+    },
+    corporation() {
+      return this.publicSettings.XPACK_LICENSE_INFO.corporation
+    },
+    copyright() {
+      if (this.corporation?.indexOf('FIT2CLOUD 飞致云') > -1) {
+        return this.corporation
+      } else {
+        return ''
+      }
+    },
+    logoSrc() {
+      return this.publicSettings['INTERFACE']['logo_logout']
+    },
+    hasXPack() {
+      return this.publicSettings.XPACK_ENABLED
+    }
+  },
+  methods: {
+    onClick(type) {
+      switch (type) {
+        case 'download':
+          window.open('/core/download/', '_blank')
+          break
+        case 'github':
+          window.open('https://github.com/jumpserver/jumpserver', '_blank')
+          break
+      }
+    }
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+.about-dialog {
+  &.dialog ::v-deep .el-dialog__body {
+    padding: 20px 30px;
+  }
+
+  &.dialog ::v-deep .el-dialog__footer {
+    border-top: none;
+    display: none;
+  }
+}
+
+.head {
+  float: right;
+}
+
+.box {
+  .text {
+    line-height: 2;
+    font-size: 14px;
+    color: #666;
+
+    .title {
+      font-weight: 600;
+    }
+
+    .value {
+      padding-left: 30px;
+    }
+
+    .icon {
+      margin-right: 4px;
+    }
+
+    span {
+      cursor: pointer;
+    }
+  }
+}
+
+::v-deep .divider.el-divider {
+  margin: 15px 0 !important;
+}
+</style>

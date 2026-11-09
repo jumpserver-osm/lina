@@ -1,0 +1,183 @@
+import color from 'css-color-function'
+import formula from './formula.json'
+import defaultThemeConfig from '@/styles/default-theme.scss'
+
+export function generateColors(themeColors) {
+  const colors = {}
+  if (!themeColors || Object.keys(themeColors).length === 0) {
+    themeColors = defaultThemeConfig
+  }
+  let primaryColor = themeColors
+  const subColor = themeColors || defaultThemeConfig
+  if (typeof themeColors === 'object') {
+    primaryColor = themeColors['--color-primary']
+  }
+
+  for (const [key, value] of Object.entries(formula)) {
+    let replaceColor
+    if (value.includes('primary')) {
+      replaceColor = value.replace(/primary/g, primaryColor)
+    }
+    if (value.includes('success')) {
+      replaceColor = value.replace(/success/g, subColor['--color-success'])
+    }
+    if (value.includes('info')) {
+      replaceColor = value.replace(/info/g, subColor['--color-info'])
+    }
+    if (value.includes('warning')) {
+      replaceColor = value.replace(/warning/g, subColor['--color-warning'])
+    }
+    if (value.includes('danger')) {
+      replaceColor = value.replace(/danger/g, subColor['--color-danger'])
+    }
+    if (replaceColor && !replaceColor.includes('undefined')) {
+      const convertColor = color.convert(replaceColor)
+      colors[key] = convertColor.indexOf('rgba') > -1 ? convertColor : colorRgbToHex(convertColor)
+    }
+  }
+
+  return colors
+}
+
+/* 将rgb颜色转成hex */
+export function colorRgbToHex(rgb) {
+  const [r, g, b] = rgb.replace(/(?:\(|\)|rgb|RGB)*/g, '').split(',')
+  return '#' + ((1 << 24) + (Number(r) << 16) + (Number(g) << 8) + Number(b)).toString(16).slice(1)
+}
+
+export function mix(color_1, color_2, weight) {
+  function d2h(d) {
+    return d.toString(16)
+  }
+
+  function h2d(h) {
+    return parseInt(h, 16)
+  }
+
+  weight = typeof weight !== 'undefined' ? weight : 50
+  let color = '#'
+
+  for (let i = 0; i <= 5; i += 2) {
+    const v1 = h2d(color_1.substr(i, 2))
+    const v2 = h2d(color_2.substr(i, 2))
+    let val = d2h(Math.floor(v2 + (v1 - v2) * (weight / 100.0)))
+
+    while (val.length < 2) {
+      val = '0' + val
+    }
+    color += val
+  }
+  return color
+}
+
+export function getCssVar(name, fallback = '') {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return fallback
+  }
+
+  const root = document.documentElement
+  const inlineValue = root.style.getPropertyValue(name)
+  const computedValue = window.getComputedStyle(root).getPropertyValue(name)
+  const defaultValue = fallback || defaultThemeConfig[name] || ''
+  return (inlineValue || computedValue || defaultValue).trim()
+}
+
+export function colorToRgba(color, alpha) {
+  const fallback = alpha === 0 ? 'transparent' : color
+  if (!color) {
+    return alpha === 0 ? 'transparent' : color
+  }
+
+  const normalizedColor = color.trim()
+  if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(normalizedColor)) {
+    const hex = normalizedColor.slice(1)
+    const fullHex = hex.length === 3
+      ? hex.split('').map(char => char + char).join('')
+      : hex
+    const r = Number.parseInt(fullHex.slice(0, 2), 16)
+    const g = Number.parseInt(fullHex.slice(2, 4), 16)
+    const b = Number.parseInt(fullHex.slice(4, 6), 16)
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`
+  }
+
+  const rgbValues = normalizedColor.match(/\d+/g)
+  if (normalizedColor.startsWith('rgb') && rgbValues && rgbValues.length >= 3) {
+    return `rgba(${rgbValues[0]}, ${rgbValues[1]}, ${rgbValues[2]}, ${alpha})`
+  }
+
+  return fallback
+}
+
+export function setRootColors() {
+  const themeColors = defaultThemeConfig || {}
+  for (const [key, value] of Object.entries(themeColors)) {
+    document.documentElement.style.setProperty(key, value)
+  }
+}
+
+function applyDefaults(colors, menuActiveTextColor, white) {
+  if (menuActiveTextColor && !colors['--menu-hover']) {
+    colors['--menu-hover'] = mix(white, menuActiveTextColor.replace(/#/g, ''), 90)
+  }
+}
+
+export function changeMenuColor(themeColors) {
+  const elementStyle = document.documentElement.style
+  const colors = Object.keys(themeColors).length > 0 ? themeColors : defaultThemeConfig
+
+  const white = 'ffffff'
+  const black = '000000'
+  const primaryColor = colors['--color-primary'] || defaultThemeConfig['--color-primary']
+
+  // 后端不用返回 --menu-hover
+  const menuActiveTextColor = colors['--menu-text-active'] || primaryColor
+
+  applyDefaults(colors, menuActiveTextColor, white)
+
+  const hasNavHeaderBg = !!colors['--nav-header-bg']
+  const bannerBg = colors['--banner-bg']
+
+  let navHeaderBase = colors['--nav-header-bg'] || bannerBg || primaryColor
+
+  if (!hasNavHeaderBg && bannerBg && bannerBg.startsWith('#')) {
+    navHeaderBase = mix(white, bannerBg.replace(/#/g, ''), 8)
+  }
+  if (!colors['--nav-header-bg']) {
+    colors['--nav-header-bg'] = navHeaderBase
+  }
+  if (!colors['--nav-header-hover']) {
+    if (navHeaderBase && navHeaderBase.startsWith('#')) {
+      colors['--nav-header-hover'] = mix(white, navHeaderBase.replace(/#/g, ''), 12)
+    } else {
+      colors['--nav-header-hover'] = navHeaderBase
+    }
+  }
+
+  const lights = [15, 40, 60, 90]
+  const darken = [15, 30, 40, 80]
+
+  const colorsGenMore = ['--color-primary']
+
+  for (const key in colors) {
+    const currentColor = colors[key]
+    elementStyle.setProperty(key, currentColor)
+
+    if (colorsGenMore.includes(key)) {
+      for (const [i, light] of lights.entries()) {
+        const color = mix(white, currentColor.replace(/#/g, ''), light)
+        elementStyle.setProperty(key + '-light' + '-' + i, color)
+      }
+      for (const [i, dark] of darken.entries()) {
+        const color = mix(black, currentColor.replace(/#/g, ''), dark)
+        elementStyle.setProperty(key + '-dark' + '-' + i, color)
+      }
+    }
+
+    if (key.includes('--color')) {
+      const lightColor = mix(white, currentColor.replace(/#/g, ''), 70)
+      const darkColor = mix(black, currentColor.replace(/#/g, ''), 70)
+      elementStyle.setProperty(key + '-light', lightColor)
+      elementStyle.setProperty(key + '-dark', darkColor)
+    }
+  }
+}

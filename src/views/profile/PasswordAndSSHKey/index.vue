@@ -1,0 +1,81 @@
+<template>
+  <GenericDetailPage :active-menu.sync="config.activeMenu" :object.sync="user" v-bind="config" v-on="$listeners">
+    <keep-alive>
+      <component :is="config.activeMenu" :object="user" @update:activeMenu="handleUpdate" />
+    </keep-alive>
+  </GenericDetailPage>
+</template>
+
+<script>
+import { GenericDetailPage } from '@/layout/components'
+import Password from './Password/Password.vue'
+import SSHKeyList from './SSHKey/SSHKeyList.vue'
+import UKey from './UKey/UKey.vue'
+
+export default {
+  components: {
+    GenericDetailPage,
+    Password,
+    SSHKeyList,
+    UKey: UKey
+  },
+  data() {
+    return {
+      user: this.$store.state.users.profile,
+      config: {
+        title: this.$t('PasswordAndSSHKey'),
+        activeMenu: 'Password',
+        submenu: this.getSubmenu(),
+        hasRightSide: false,
+        hasActivity: false,
+        actions: {
+          detailApiUrl: '/api/v1/users/profile/'
+        }
+      }
+    }
+  },
+  computed: {
+    passwordMenuDisabled() {
+      return this.$store.state.users.profile.source.value !== 'local'
+    }
+  },
+  watch: {
+    passwordMenuDisabled: {
+      immediate: true,
+      handler(disabled) {
+        this.config.submenu = this.getSubmenu()
+        if (disabled && this.config.activeMenu === 'Password') {
+          this.config.activeMenu = 'SSHKeyList'
+        }
+      }
+    }
+  },
+  methods: {
+    getSubmenu() {
+      return [
+        {
+          title: this.$t('LoginPasswordSetting'),
+          name: 'Password',
+          disabled: this.$store.state.users.profile.source.value !== 'local'
+        },
+        {
+          title: this.$t('LoginSSHKeySetting'),
+          name: 'SSHKeyList',
+          disabled: !this.$store.state.users.profile.can_public_key_auth
+        },
+        {
+          title: this.$t('LoginUKeySetting'),
+          name: 'UKey',
+          hidden: !this.$store.state.users.profile.can_ukey_auth
+        }
+      ]
+    },
+    handleUpdate(value) {
+      this.config.activeMenu = value
+    }
+  }
+}
+</script>
+
+<style scoped>
+</style>

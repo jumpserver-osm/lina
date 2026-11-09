@@ -1,0 +1,134 @@
+<template>
+  <div>
+    <el-alert v-sanitize="helpText" type="info" />
+    <IBox>
+      <GenericCreateUpdateForm
+        :create-success-next-route="successUrl"
+        :update-success-next-route="successUrl"
+        v-bind="$data"
+      />
+    </IBox>
+  </div>
+</template>
+
+<script>
+import { IBox } from '@/components'
+import { GenericCreateUpdateForm } from '@/layout/components'
+import AddressInput from '@/components/Form/FormFields/AddressInput'
+import { testSyslogSetting } from '@/api/settings'
+import SyslogDocDownloadButton from './components/SyslogDocDownloadButton.vue'
+import i18n from '@/i18n/i18n'
+import { isValidAddress, ADDRESS_KINDS } from '@/utils/addressType'
+
+const SYSLOG_ADDRESS_KINDS = ADDRESS_KINDS.network
+
+export default {
+  name: 'Syslog',
+  components: {
+    GenericCreateUpdateForm,
+    IBox,
+    SyslogDocDownloadButton
+  },
+  data() {
+    const vm = this
+    return {
+      helpText: this.$t('SyslogHelpText'),
+      fields: [
+        [this.$t('Server'), ['SYSLOG_ENABLE', 'SYSLOG_HOST', 'SYSLOG_PORT', 'SYSLOG_FACILITY', 'SYSLOG_SOCKTYPE', 'SYSLOG_DOC']]
+      ],
+      fieldsMeta: {
+        SYSLOG_ENABLE: {
+          type: 'checkbox',
+          label: this.$t('SyslogEnable')
+        },
+        SYSLOG_HOST: {
+          label: this.$t('SyslogHost'),
+          component: AddressInput,
+          el: {
+            kinds: SYSLOG_ADDRESS_KINDS
+          },
+          rules: [
+            {
+              validator: (rule, value, callback) => {
+                value = value?.trim()
+                if (!value) return callback()
+                if (isValidAddress(value, SYSLOG_ADDRESS_KINDS)) {
+                  callback()
+                } else {
+                  callback(new Error(i18n.t('InvalidAddress')))
+                }
+              },
+              trigger: ['blur', 'change'],
+              required: true
+            }
+          ]
+        },
+        SYSLOG_PORT: {
+          label: this.$t('SyslogPort'),
+          type: 'input-number',
+          el: {
+            min: 1,
+            max: 65535,
+            step: 1
+          }
+        },
+        SYSLOG_FACILITY: {
+          label: this.$t('SyslogFacility')
+        },
+        SYSLOG_SOCKTYPE: {
+          label: this.$t('SyslogSockType'),
+          type: 'radio-group',
+          options: [
+            { label: 'UDP', value: 2 },
+            { label: 'TCP', value: 1 }
+          ]
+        },
+        SYSLOG_DOC: {
+          label: this.$t('SyslogDoc'),
+          component: SyslogDocDownloadButton
+        }
+      },
+      cleanFormValue(data) {
+        delete data.SYSLOG_DOC
+        return data
+      },
+      hasDetailInMsg: false,
+      successUrl: { name: 'Msg' },
+      url: '/api/v1/settings/setting/?category=syslog',
+      submitMethod() {
+        return 'put'
+      },
+      moreButtons: [
+        {
+          title: this.$t('SyslogTest'),
+          loading: false,
+          callback: function(value, form, btn) {
+            form.validate(valid => {
+              if (!valid) return
+              const testValue = {}
+              testValue['SYSLOG_HOST'] = value['SYSLOG_HOST']
+              testValue['SYSLOG_PORT'] = value['SYSLOG_PORT']
+              testValue['SYSLOG_FACILITY'] = value['SYSLOG_FACILITY']
+              testValue['SYSLOG_SOCKTYPE'] = value['SYSLOG_SOCKTYPE']
+              btn.loading = true
+              testSyslogSetting(testValue)
+                .then(res => {
+                  vm.$message.success(res['msg'])
+                })
+                .catch(res => {
+                  vm.$message.error(res['response']['data']['error'])
+                })
+                .finally(() => {
+                  btn.loading = false
+                })
+            })
+          }
+        }
+      ]
+    }
+  },
+  methods: {}
+}
+</script>
+
+<style scoped></style>

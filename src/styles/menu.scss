@@ -1,0 +1,285 @@
+@import './variables';
+
+$icon-width: 1.1em;
+$single-menu-height: 38px;
+
+@mixin menu-active-pill {
+  position: relative;
+  color: var(--menu-active-text, var(--menu-text-active));
+  background: var(--menu-active-bg, var(--menu-hover));
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: var(--menu-active-indicator-width, 3px);
+    border-radius: 0 2px 2px 0;
+    background-color: var(--menu-active-indicator, var(--color-primary));
+    display: var(--menu-active-indicator-display, block);
+  }
+}
+
+.switcher-popper {
+  padding: 6px !important;
+  background: var(--menu-bg) !important;
+  border: 1px solid var(--menu-popup-border, var(--color-border)) !important;
+  box-shadow: var(--menu-popup-shadow, 0 8px 18px rgba(0, 0, 0, 0.12)) !important;
+  &.el-popper[x-placement^='right'] .popper__arrow,
+  &.el-popper[x-placement^='left'] .popper__arrow,
+  &.el-popper[x-placement^='top'] .popper__arrow,
+  &.el-popper[x-placement^='bottom'] .popper__arrow {
+    border-color: transparent;
+    border-right-color: var(--menu-popup-border, var(--color-border));
+  }
+  &.el-popper[x-placement^='right'] .popper__arrow:after,
+  &.el-popper[x-placement^='left'] .popper__arrow:after,
+  &.el-popper[x-placement^='top'] .popper__arrow:after,
+  &.el-popper[x-placement^='bottom'] .popper__arrow:after {
+    border-color: transparent;
+    border-right-color: var(--menu-bg);
+  }
+
+  .el-menu {
+    background: transparent !important;
+    padding: 0;
+  }
+
+  .el-menu-item {
+    color: var(--menu-text);
+    // border-radius: 6px;
+
+    &:hover {
+      color: var(--menu-text-active);
+      background: var(--menu-hover-bg, var(--menu-hover));
+    }
+
+    &.is-active {
+      @include menu-active-pill;
+    }
+  }
+
+  .icons,
+  .icons-title {
+    color: inherit !important;
+  }
+}
+
+@mixin collapse-active {
+  background-color: var(--menu-hover);
+
+  &:before {
+    width: 0;
+  }
+}
+
+.el-menu--vertical {
+  background-color: var(--menu-bg);
+}
+
+.el-menu {
+  border-right: none !important;
+  background-color: inherit !important;
+  color: var(--menu-text);
+
+  .svg-icon,
+  .el-icon,
+  .fa {
+    width: $icon-width !important;
+    height: $icon-width !important;
+    margin-right: 10px;
+  }
+
+  .submenu-item {
+    .item-title {
+      width: 150px;
+      //overflow: hidden;
+      //white-space: nowrap;
+      //text-overflow: ellipsis;
+
+      word-wrap: break-word;
+      word-break: break-word;
+      white-space: normal;
+      line-height: 1.2;
+      display: -webkit-box; /* 创建弹性盒子模型 */
+      -webkit-box-orient: vertical; /* 垂直排列子元素 */
+      overflow: hidden; /* 隐藏超出内容 */
+      text-overflow: ellipsis; /* 超出部分显示省略号 */
+      -webkit-line-clamp: 2; /* 限制显示两行 */
+    }
+  }
+
+  .el-submenu .el-menu-item {
+    height: $single-menu-height;
+    line-height: $single-menu-height;
+  }
+
+  .el-submenu__title {
+    display: flex;
+    align-items: center;
+    height: $single-menu-height;
+    line-height: $single-menu-height;
+    color: var(--menu-text);
+
+    &:focus {
+      color: var(--menu-text);
+      background: var(--menu-bg);
+    }
+
+    &:focus-visible {
+      color: var(--menu-text-active);
+      background: var(--menu-hover-bg, var(--menu-hover));
+    }
+
+    &:hover {
+      color: var(--menu-text-active);
+      background: var(--menu-hover-bg, var(--menu-hover));
+    }
+  }
+
+  // 通用 item 样式
+  .el-menu-item {
+    display: flex;
+    align-items: center;
+    height: $single-menu-height;
+    color: var(--menu-text);
+    letter-spacing: 0.02em;
+    font-size: 12px;
+    min-width: 200px;
+
+    &:focus:not(.is-active) {
+      color: var(--menu-text);
+      background: var(--menu-bg);
+    }
+
+    &:focus-visible:not(.is-active) {
+      color: var(--menu-text-active);
+      background: var(--menu-hover-bg, var(--menu-hover));
+    }
+
+    &:hover {
+      color: var(--menu-text-active);
+      background: var(--menu-hover-bg, var(--menu-hover));
+    }
+
+    &.is-active {
+      @include menu-active-pill;
+
+      span {
+        color: var(--menu-active-text, var(--menu-text-active));
+      }
+    }
+  }
+
+  .group-title {
+    color: var(--menu-text);
+    // 分组的 title 样式
+    & > span {
+      display: block;
+      padding: 10px 0 2px 20px;
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 25px;
+      letter-spacing: 0.07em;
+      opacity: 0.75;
+    }
+
+    .nest-menu {
+      //display: flex;
+      cursor: pointer;
+
+      // 存在三级子菜单
+      .level1-menu {
+        &.el-submenu.is-opened {
+          border-top: solid 1px rgba(255, 255, 255, 0.06);
+          background-color: var(--menu-is-open-bg);
+        }
+
+        &.el-submenu.is-active {
+          .el-submenu__title {
+            @include menu-active-pill;
+          }
+        }
+
+        .el-menu--inline .nest-menu .el-menu-item {
+          span {
+            &::before {
+              content: '•'; /* 使用圆点符号 */
+              font-size: 15px;
+              position: absolute; /* 绝对定位伪元素 */
+              left: 25px; /* 调整伪元素位置 */
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 折叠起来的样式
+  &.el-menu--collapse {
+    // 覆盖默认 64px 宽度
+    width: 55px;
+
+    .level1-menu {
+      height: $single-menu-height;
+      line-height: $single-menu-height;
+      display: inline-block;
+
+      .el-tooltip {
+        width: 55px !important;
+      }
+    }
+
+    .menu-link-item.level1-menu,
+    .external-action-menu-item.level1-menu {
+      display: flex;
+      justify-content: center;
+      min-width: 55px;
+      width: 55px;
+      padding: 0;
+
+      &::before {
+        left: 4px;
+      }
+
+      .svg-icon,
+      .el-icon,
+      .fa {
+        margin-right: 0 !important;
+      }
+
+      .item-title {
+        display: inline-block;
+        width: 0;
+        height: 0;
+        overflow: hidden;
+        visibility: hidden;
+      }
+    }
+
+    .group-title {
+      & > span {
+        display: none;
+      }
+
+      .el-divider.el-divider--horizontal {
+        margin: 0 !important;
+        display: none;
+      }
+
+      .level1-menu {
+        min-width: 55px;
+      }
+
+      .nest-menu .level2-menu {
+        line-height: $single-menu-height;
+      }
+
+      .el-tooltip {
+        width: 55px !important;
+      }
+    }
+  }
+}

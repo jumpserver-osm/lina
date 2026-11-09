@@ -1,0 +1,282 @@
+<template>
+  <div>
+    <Echart
+      ref="echarts"
+      :options="options"
+      :autoresize="true"
+      theme="light"
+      @finished="genSnapshot"
+    />
+  </div>
+</template>
+
+<script>
+// eslint-disable-next-line no-unused-vars
+import * as echarts from 'echarts'
+import { mix } from '@/utils/theme/color'
+import Echart from '@/components/Dashboard/Echart.vue'
+
+export default {
+  name: 'LoginMetric',
+  components: { Echart },
+  props: {
+    range: {
+      type: String,
+      default: 'weekly'
+    },
+    datesMetrics: {
+      type: Array,
+      default: () => []
+    },
+    primaryName: {
+      type: String,
+      default: ''
+    },
+    primaryData: {
+      type: Array,
+      default: () => []
+    },
+    secondaryName: {
+      type: String,
+      default: ''
+    },
+    secondaryData: {
+      type: Array,
+      default: () => []
+    }
+  },
+  data: function() {
+    return {
+      dataUrl: '',
+      metricsData: {
+        dates_metrics_date: [],
+        dates_metrics_total_count_active_assets: [],
+        dates_metrics_total_count_active_users: []
+      }
+    }
+  },
+  computed: {
+    mixColors() {
+      const documentStyle = document.documentElement.style
+      const primary = documentStyle.getPropertyValue('--color-primary')
+      const colorValue = primary.replace(/#/g, '')
+      const TwoLevelColor = mix(colorValue, 'ffffff', 38)
+      const ThreeLevelColor = mix(colorValue, 'ffffff', 20)
+      const shadowColor = mix(colorValue, 'ffffff', 1)
+      return {
+        primary,
+        TwoLevelColor,
+        ThreeLevelColor,
+        shadowColor
+      }
+    },
+    options() {
+      const { primary, TwoLevelColor, ThreeLevelColor, shadowColor } = this.mixColors
+      return {
+        title: {
+          show: false
+        },
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: {
+            type: 'cross',
+            label: {
+              backgroundColor: '#6a7985'
+            }
+          }
+        },
+        legend: {
+          left: 'auto',
+          icon: 'rect',
+          // 图例标记的图形宽度
+          itemWidth: 10,
+          itemHeight: 10
+        },
+        grid: {
+          left: '3%',
+          right: '4%',
+          bottom: '3%',
+          containLabel: true
+        },
+        color: [primary, '#F3B44B'],
+        xAxis: [
+          {
+            type: 'category',
+            boundaryGap: false,
+            axisLine: {
+              lineStyle: {
+                color: '#8F959E'
+              }
+            },
+            axisLabel: {
+              textStyle: {
+                color: '#8F959E'
+              }
+            },
+            axisTick: {
+              show: false
+            },
+            data: this.datesMetrics
+          }
+        ],
+        yAxis: [
+          {
+            type: 'value',
+            name: '',
+            axisLine: {
+              show: false,
+              lineStyle: {
+                color: '#fff'
+              }
+            },
+            axisLabel: {
+              textStyle: {
+                color: '#8F959E'
+              }
+            },
+            axisTick: {
+              show: false
+            },
+            // 坐标轴线样式
+            splitLine: {
+              show: true,
+              lineStyle: {
+                color: '#EFF0F1'
+              }
+            }
+          }
+        ],
+
+        animationDuration: 500,
+        series: [
+          {
+            name: this.primaryName,
+            type: 'line',
+            smooth: true,
+            areaStyle: {
+              // 区域填充样式
+              normal: {
+                color: new echarts.graphic.LinearGradient(
+                  0,
+                  0,
+                  0,
+                  1,
+                  [{
+                    offset: 0,
+                    color: primary
+                  }, {
+                    offset: 0.6,
+                    color: TwoLevelColor
+                  },
+                  {
+                    offset: 0.8,
+                    color: ThreeLevelColor
+                  }
+                  ],
+                  false
+                ),
+                shadowColor: shadowColor,
+                shadowBlur: 5
+              }
+            },
+            data: this.primaryData
+          },
+          {
+            name: this.secondaryName,
+            type: 'line',
+            smooth: true,
+            areaStyle: {
+              // 区域填充样式
+              normal: {
+                color: new echarts.graphic.LinearGradient(
+                  0,
+                  0,
+                  0,
+                  1,
+                  [{
+                    offset: 0,
+                    color: 'rgba(249, 199, 79, 0.6)'
+                  }, {
+                    offset: 0.6,
+                    color: 'rgba(249, 199, 79, 0.2)'
+                  },
+                  {
+                    offset: 0.8,
+                    color: 'rgba(249, 199, 79, 0.1)'
+                  }
+                  ],
+                  false
+                ),
+                shadowColor: 'rgba(249, 199, 79, 0.1)',
+                shadowBlur: 6
+              }
+            },
+            data: this.secondaryData
+          }
+        ]
+      }
+    }
+  },
+  watch: {
+    range() {
+      this.genSnapshot()
+    },
+    datesMetrics() {
+      this.genSnapshot()
+    },
+    primaryData() {
+      this.genSnapshot()
+    },
+    secondaryData() {
+      this.genSnapshot()
+    }
+  },
+  mounted() {
+    this.genSnapshot()
+    this._before = () => this.genSnapshot(true)
+    this._after = () => this.forceResize()
+    window.addEventListener('beforeprint', this._before)
+    window.addEventListener('afterprint', this._after)
+    // 兼容某些浏览器（Safari）触发 print 媒体切换
+    this._mql = window.matchMedia && window.matchMedia('print')
+    if (this._mql) {
+      const handler = e => (e.matches ? this._before() : this._after())
+      this._mql.addEventListener?.('change', handler)
+      this._mql.addListener?.(handler)
+      this._mql._handler = handler
+    }
+  },
+  beforeDestroy() {
+    window.removeEventListener('beforeprint', this._before)
+    window.removeEventListener('afterprint', this._after)
+    if (this._mql) {
+      this._mql.removeEventListener?.('change', this._mql._handler)
+      this._mql.removeListener?.(this._mql._handler)
+    }
+  },
+  methods: {
+    forceResize() {
+      const inst = this.$refs.echarts?.echartsInstance
+      if (inst) inst.resize()
+    },
+    async genSnapshot(force = false) {
+      if (force) this.forceResize()
+      const inst = this.$refs.echarts?.echartsInstance
+      if (!inst) return
+      try {
+        this.dataUrl = inst.getDataURL({ pixelRatio: 2, backgroundColor: '#ffffff' })
+      } catch (e) {
+        this.dataUrl = ''
+      }
+    }
+  }
+
+}
+</script>
+
+<style lang="scss" scoped>
+.echarts {
+  width: 100%;
+  height: 272px;
+}
+</style>

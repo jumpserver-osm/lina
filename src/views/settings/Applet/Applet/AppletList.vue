@@ -1,0 +1,87 @@
+<template>
+  <div>
+    <el-row :gutter="20">
+      <el-col :md="24" :sm="24">
+        <el-alert type="info">
+          {{ $t('AppletHelpText') }}
+        </el-alert>
+      </el-col>
+    </el-row>
+    <DrawerCardTable ref="CardTable" v-bind="$data" />
+    <UploadDialog :visible.sync="uploadDialogVisible" @upload-event="handleUpload" />
+  </div>
+</template>
+
+<script>
+import { mapGetters } from 'vuex'
+import DrawerCardTable from '@/components/Table/DrawerCardTable'
+import UploadDialog from './UploadDialog'
+
+export default {
+  name: 'Applets',
+  components: {
+    DrawerCardTable,
+    UploadDialog
+  },
+  data() {
+    return {
+      uploadDialogVisible: false,
+      detailDrawer: () => import('./AppletDetail/index.vue'),
+      tableConfig: {
+        url: '/api/v1/terminal/applets/',
+        deletePerm: 'terminal.delete_applet'
+      },
+      headerActions: {
+        onCreate: () => {
+          this.uploadDialogVisible = true
+        },
+        createTitle: this.$t('Upload'),
+        hasCreate: this.$hasPerm('terminal.add_applet'),
+        searchConfig: {
+          getUrlQuery: false,
+          exclude: ['version']
+        },
+        extraActions: [
+          {
+            title: this.$t('Marketplace'),
+            icon: 'el-icon-shopping-bag-1',
+            callback: () => {
+              window.open(this.publicSettings?.REMOTE_APP_STORE_URL)
+            },
+            has: () => !!this.publicSettings?.REMOTE_APP_STORE_URL
+          }
+        ],
+        detailRoute: 'AppletDetail',
+        hasExport: false,
+        hasImport: false,
+        hasBulkDelete: false,
+        hasBulkUpdate: false,
+        hasColumnSetting: false
+      }
+    }
+  },
+  computed: {
+    ...mapGetters({
+      publicSettings: 'publicSettings'
+    })
+  },
+  mounted() {
+    this.$store.dispatch('users/enterSettingOrg')
+  },
+  methods: {
+    handleUpload(res) {
+      this.$refs.CardTable.reloadTable()
+    }
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+.dom {
+  white-space: initial;
+
+  .el-tag {
+    margin-right: 3px;
+  }
+}
+</style>
