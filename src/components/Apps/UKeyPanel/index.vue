@@ -250,7 +250,10 @@ export default {
     },
 
     infoWhenPassed() {
-      return this.evaluateWhen(this.sdkConfig?.info?.when)
+      // Track the reactive device snapshot instead of the SDK's plain state.
+      const ctx = this.buildContext({})
+      ctx.ukey = this.ukeySnapshot
+      return this.evaluateWhen(this.sdkConfig?.info?.when, ctx)
     },
 
     operationWhenPassed() {
